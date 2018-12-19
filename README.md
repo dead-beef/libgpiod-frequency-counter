@@ -44,7 +44,7 @@ int main() {
 	interval.tv_nsec = 500000000;
 
 	chip = gpiod_chip_open("/dev/gpiochip0");
-    input_line = gpiod_chip_get_line(chip, INPUT_PIN);
+	input_line = gpiod_chip_get_line(chip, INPUT_PIN);
 
 	gpiod_frequency_counter_init(&counter, input_line, interval);
 
