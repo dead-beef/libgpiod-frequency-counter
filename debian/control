@@ -1,0 +1,11 @@
+Source: libgpiod-frequency-counter
+Maintainer: user user <user@localhost.localdomain>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper(>= 9), libgpiod-dev
+
+Package: libgpiod-frequency-counter
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgpiod-dev
+Description: Frequency counter for libgpiod
