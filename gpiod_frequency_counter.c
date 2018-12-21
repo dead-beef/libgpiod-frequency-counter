@@ -1,5 +1,6 @@
 #include "gpiod_frequency_counter.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,9 +62,15 @@ static void* gpiod_frequency_counter_thread(void *counter) {
 		if(timespec_ge(&tmp, &self->interval)) {
 			prev = time;
 			timeout = self->interval;
-			self->period = 2.0 * (double)self->interval.tv_sec / count;
-			self->period += 2e-9 * (double)self->interval.tv_nsec / count;
-			self->frequency = 1.0 / self->period;
+			if(!count) {
+				self->period = INFINITY;
+				self->frequency = 0.0;
+			}
+			else {
+				self->period = 2.0 * (double)self->interval.tv_sec / count;
+				self->period += 2e-9 * (double)self->interval.tv_nsec / count;
+				self->frequency = 1.0 / self->period;
+			}
 			count = 0;
 		}
 		else {
