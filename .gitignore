@@ -1,0 +1,11 @@
+/dep
+/obj
+/debian/.debhelper
+/debian/libgpiod-frequency-counter
+/debian/files
+/debian/*.substvars
+*.so
+*.a
+*.o
+*.log
+/gpio-get-frequency
