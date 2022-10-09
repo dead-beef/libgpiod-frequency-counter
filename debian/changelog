@@ -1,11 +1,11 @@
-libgpiod-frequency-counter (2.0-1) UNRELEASED; urgency=medium
+libgpiod-frequency-counter (0.2.0-1) UNRELEASED; urgency=medium
 
   * Update. (Closes: #XXXXXX)
 
- -- MAINTAINER <user@localhost.localdomain> Thu, 29 Sep 2022 02:51:32 +0000
+ -- MAINTAINER <user@localhost.localdomain>  Thu, 29 Sep 2022 02:51:32 +0000
 
-libgpiod-frequency-counter (1.0-1) UNRELEASED; urgency=medium
+libgpiod-frequency-counter (0.1.0-1) UNRELEASED; urgency=medium
 
   * Initial release. (Closes: #XXXXXX)
 
- -- MAINTAINER <user@localhost.localdomain> Tue, 08 Nov 2016 21:31:18 +0000
+ -- MAINTAINER <user@localhost.localdomain>  Tue, 08 Nov 2016 21:31:18 +0000

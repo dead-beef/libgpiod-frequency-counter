@@ -3,9 +3,10 @@
 /debian/.debhelper
 /debian/libgpiod-frequency-counter
 /debian/files
+/debian/tmp
 /debian/*.substvars
 *.so
 *.a
 *.o
 *.log
-/gpio-get-frequency
+/gpio-frequency-get

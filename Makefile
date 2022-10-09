@@ -1,14 +1,14 @@
 AR := ar
 CC := gcc
 INSTALL := install -m 644
+INSTALL_BIN := install -m 755
 CFLAGS := -Wall -Werror -O2 -fPIC
 LDFLAGS := -lgpiod
 CMD_LDFLAGS := $(LDFLAGS) -L.
 
-# Directories with source code
 PKG := libgpiod-frequency-counter
-CMD := gpio-get-frequency
-VERSION := 2.0
+CMD := gpio-frequency-get
+VERSION := 0.2.0
 LIB_NAME := gpiod-frequency-counter
 LIB := $(addprefix lib$(LIB_NAME), .so .a)
 SRC_DIR := src
@@ -27,7 +27,7 @@ CMD_LDFLAGS += -l$(LIB_NAME)
 
 # All source files in our project (without libraries!)
 LIB_CFILES := $(SRC_DIR)/gpiod_frequency_counter.c
-CMD_CFILES := $(SRC_DIR)/gpio_get_frequency.c
+CMD_CFILES := $(SRC_DIR)/gpio_frequency_get.c
 #DATA := $(wildcard $(DATA_DIR)/*)
 #DATA := $(DATA_DIR)
 
@@ -56,13 +56,14 @@ clean:
 	rm -rvf $(OBJ_DIR)/* $(DEP_DIR)/* $(CMD) $(LIB)
 
 pkg: clean
-	rm -fv ../$(PKG)_*
+#	rm -fv ../$(PKG)_*
 	tar czvf ../$(PKG)_$(VERSION).orig.tar.gz .
 	dpkg-buildpackage -us -uc
 
 install:
+	mkdir -p $(addprefix $(DESTDIR)/usr/, bin lib include)
+	$(INSTALL_BIN) $(CMD) $(DESTDIR)/usr/bin/
 	$(INSTALL) $(LIB) $(DESTDIR)/usr/lib/
-	$(INSTALL) $(CMD) $(DESTDIR)/usr/bin/
 	$(INSTALL) $(INCLUDE_DIR)/gpiod_frequency_counter.h $(DESTDIR)/usr/include/
 
 # Rules for compiling targets
