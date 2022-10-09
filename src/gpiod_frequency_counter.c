@@ -9,7 +9,7 @@
 EXPORT int gpiod_frequency_counter_init(
 	gpiod_frequency_counter *self,
 	struct gpiod_line *line,
-	int buf_size
+	size_t buf_size
 ) {
 	self->line = line;
 	self->period_buf_size = buf_size;
@@ -170,4 +170,8 @@ EXPORT double gpiod_frequency_counter_get_duty_cycle(
 	}
 	double high = gpiod_frequency_counter_get_high_period(self);
 	return high / period;
+}
+
+EXPORT const char* gpiod_frequency_counter_version_string() {
+	return VERSION_STR;
 }

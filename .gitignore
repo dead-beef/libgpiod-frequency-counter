@@ -1,7 +1,8 @@
-/dep
-/obj
 /debian/.debhelper
+/debian/gpiod-frequency
 /debian/libgpiod-frequency-counter
+/debian/libgpiod-frequency-counter-dev
+/debian/python3-libgpiod-frequency-counter
 /debian/files
 /debian/tmp
 /debian/*.substvars
@@ -9,4 +10,6 @@
 *.a
 *.o
 *.log
-/gpio-frequency-get
+bin
+dep
+obj

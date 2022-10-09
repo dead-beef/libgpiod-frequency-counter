@@ -3,7 +3,7 @@ Maintainer: MAINTAINER <user@localhost.localdomain>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: debhelper(>= 9), libgpiod-dev
+Build-Depends: debhelper(>= 9), libgpiod-dev, python3-dev
 
 Package: libgpiod-frequency-counter
 Architecture: any
@@ -17,5 +17,10 @@ Description: Frequency counter for libgpiod - static libraries and headers
 
 Package: gpiod-frequency
 Architecture: any
-Depends: libgpiod-frequency-counter
+Depends: ${shlibs:Depends}, libgpiod-frequency-counter
 Description: Frequency counter for libgpiod - binary
+
+Package: python3-libgpiod-frequency-counter
+Architecture: any
+Depends: python3-libgpiod, libgpiod-frequency-counter
+Description: Frequency counter for libgpiod - Python bindings
