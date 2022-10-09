@@ -9,18 +9,30 @@
 #include <gpiod.h>
 #include <unistd.h>
 
+enum {
+	PRINT_FREQUENCY = 1,
+	PRINT_PERIOD,
+	PRINT_SPLIT_PERIOD,
+	PRINT_DUTY_CYCLE,
+	PRINT_ALL,
+};
+
 typedef struct arguments {
 	const char *chip;
+	const char *format;
 	unsigned long line;
 	int buf_size;
+	int print;
 	struct timespec *interval;
 	struct timespec _interval;
 } arguments;
 
 void init_args(struct arguments *args) {
 	args->chip = "0";
+	args->format = "%.04lf";
 	args->line = 0;
 	args->buf_size = 32;
+	args->print = PRINT_FREQUENCY;
 	args->interval = NULL;
 	args->_interval.tv_sec = 0;
 	args->_interval.tv_nsec = 0;
@@ -31,14 +43,21 @@ void print_help(const char *name) {
 	init_args(&args);
 	fprintf(
 		stderr,
-		"Usage: %s [-h] [-i <time>] [-b <size>] <chip name/number> <offset>\n"
+		"Usage: %s [-h] [-i <time>] [-b <size>] [-f <format>] [-p | -P | -d | -F | -a] <chip name/number> <offset>\n"
 		"\n"
 		"Options:\n"
 		"    -h, --help               print this help text and exit\n"
 		"    -i, --interval <time>    maximum time in seconds (default: none)\n"
-		"    -b, --buf-size <size>    period buffer size (default: %d)\n",
+		"    -b, --buf-size <size>    period buffer size (default: %d)\n"
+		"    -f, --format <format>    output format string (defult: %s)\n"
+		"    -p, --period             print period\n"
+		"    -P, --split-period       print low and high periods\n"
+		"    -d, --duty-cycle         print duty cycle\n"
+		"    -F, --frequency          print frequency (default)\n"
+		"    -a, --all                print all of the above\n",
 		name,
-		args.buf_size
+		args.buf_size,
+		args.format
 	);
 }
 
@@ -90,6 +109,27 @@ int parse_args(int argc, char **argv, struct arguments *args) {
 				return 1;
 			}
 			args->buf_size = buf_size;
+		} else if (!strcmp(arg, "-f") || !strcmp(arg, "--format")) {
+			++i;
+			if (i >= argc) {
+				goto missing_arg;
+			}
+			args->format = argv[i++];
+		} else if (!strcmp(arg, "-p") || !strcmp(arg, "--period")) {
+			++i;
+			args->print = PRINT_PERIOD;
+		} else if (!strcmp(arg, "-P") || !strcmp(arg, "--split-period")) {
+			++i;
+			args->print = PRINT_SPLIT_PERIOD;
+		} else if (!strcmp(arg, "-F") || !strcmp(arg, "--frequency")) {
+			++i;
+			args->print = PRINT_FREQUENCY;
+		} else if (!strcmp(arg, "-d") || !strcmp(arg, "--duty-cycle")) {
+			++i;
+			args->print = PRINT_DUTY_CYCLE;
+		} else if (!strcmp(arg, "-a") || !strcmp(arg, "--all")) {
+			++i;
+			args->print = PRINT_ALL;
 		} else {
 			break;
 		}
@@ -144,8 +184,66 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "gpiod_frequency_counter_count: %s\n", strerror(errno));
 		goto error;
 	}
-	double frequency = gpiod_frequency_counter_get_frequency(&counter);
-	printf("%.04lf\n", frequency);
+
+	switch (args.print) {
+		case PRINT_PERIOD:
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_period(&counter)
+			);
+			break;
+		case PRINT_FREQUENCY:
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_frequency(&counter)
+			);
+			break;
+		case PRINT_DUTY_CYCLE:
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_duty_cycle(&counter)
+			);
+			break;
+		case PRINT_SPLIT_PERIOD:
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_low_period(&counter)
+			);
+			putchar(' ');
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_high_period(&counter)
+			);
+			break;
+		case PRINT_ALL:
+			fputs("frequency = ", stdout);
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_frequency(&counter)
+			);
+			fputs("\nperiod = ", stdout);
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_period(&counter)
+			);
+			fputs(" (low = ", stdout);
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_low_period(&counter)
+			);
+			fputs(" ; high = ", stdout);
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_high_period(&counter)
+			);
+			fputs(")\nduty cycle = ", stdout);
+			printf(
+				args.format,
+				gpiod_frequency_counter_get_duty_cycle(&counter)
+			);
+	}
+
+	putchar('\n');
 
 	gpiod_frequency_counter_destroy(&counter);
 	gpiod_chip_close(chip);

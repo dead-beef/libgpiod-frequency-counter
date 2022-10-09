@@ -6,9 +6,10 @@
 
 typedef struct gpiod_frequency_counter {
 	struct gpiod_line *line;
-	double *period;
 	int period_buf_size;
-	int period_buf_offset;
+	double *period_buf[2];
+	int period_buf_offset[2];
+	double period[2];
 } gpiod_frequency_counter;
 
 int gpiod_frequency_counter_init(
@@ -22,10 +23,14 @@ void gpiod_frequency_counter_reset(gpiod_frequency_counter *self);
 int gpiod_frequency_counter_count(
 	gpiod_frequency_counter *self,
 	int waves,
-	struct timespec *max_time
+	const struct timespec *timeout
 );
 
 double gpiod_frequency_counter_get_period(gpiod_frequency_counter *self);
 double gpiod_frequency_counter_get_frequency(gpiod_frequency_counter *self);
+
+double gpiod_frequency_counter_get_high_period(gpiod_frequency_counter *self);
+double gpiod_frequency_counter_get_low_period(gpiod_frequency_counter *self);
+double gpiod_frequency_counter_get_duty_cycle(gpiod_frequency_counter *self);
 
 #endif

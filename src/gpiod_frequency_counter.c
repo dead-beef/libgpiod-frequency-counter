@@ -6,181 +6,168 @@
 #include <string.h>
 #include <errno.h>
 
-static double timespec_to_double(const struct timespec *tv) {
-	return (double)tv->tv_sec + 1e-9 * tv->tv_nsec;
-}
-
-static void timespec_diff(
-	const struct timespec *start,
-	const struct timespec *stop,
-	struct timespec *res
-) {
-	if (start->tv_nsec > stop->tv_nsec) {
-		res->tv_sec = stop->tv_sec - start->tv_sec - 1;
-		res->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
-	} else {
-		res->tv_sec = stop->tv_sec - start->tv_sec;
-		res->tv_nsec = stop->tv_nsec - start->tv_nsec;
-	}
-}
-
-static int timespec_ge(
-	const struct timespec *x,
-	const struct timespec *y
-) {
-	return (x->tv_sec > y->tv_sec
-	        || (x->tv_sec == y->tv_sec && x->tv_nsec >= y->tv_nsec));
-}
-
-
-int gpiod_frequency_counter_init(
+EXPORT int gpiod_frequency_counter_init(
 	gpiod_frequency_counter *self,
 	struct gpiod_line *line,
 	int buf_size
 ) {
-	void *buf = calloc(buf_size, sizeof(*self->period));
-	if (!buf) {
-		return -1;
-	}
 	self->line = line;
 	self->period_buf_size = buf_size;
-	self->period_buf_offset = 0;
-	self->period = buf;
+	memset(self->period_buf, 0, sizeof(self->period_buf));
+	memset(self->period_buf_offset, 0, sizeof(self->period_buf_offset));
+	for (int i = 0; i < 2; ++i) {
+		self->period[i] = INFINITY;
+		self->period_buf[i] = calloc(buf_size, sizeof(**self->period_buf));
+		if (!self->period_buf[i]) {
+			gpiod_frequency_counter_destroy(self);
+			return -1;
+		}
+	}
 	return 0;
 }
 
-void gpiod_frequency_counter_destroy(gpiod_frequency_counter *self) {
+EXPORT void gpiod_frequency_counter_destroy(gpiod_frequency_counter *self) {
 	if (self->line) {
-		gpiod_line_release(self->line);
+		//gpiod_line_release(self->line);
 		self->line = NULL;
 	}
-	if (self->period) {
-		free(self->period);
-		self->period = NULL;
+	for (int i = 0; i < 2; ++i) {
+		if (self->period_buf[i]) {
+			free(self->period_buf[i]);
+			self->period_buf[i] = NULL;
+		}
 	}
 }
 
-void gpiod_frequency_counter_reset(gpiod_frequency_counter *self) {
-	memset(self->period, 0, self->period_buf_size * sizeof(*self->period));
-	self->period_buf_offset = 0;
-	gpiod_line_release(self->line);
+EXPORT void gpiod_frequency_counter_reset(gpiod_frequency_counter *self) {
+	size_t buf_size = self->period_buf_size * sizeof(**self->period_buf);
+	for (int i = 0; i < 2; ++i) {
+		self->period[i] = INFINITY;
+		memset(self->period_buf[i], 0, buf_size);
+	}
+	memset(self->period_buf_offset, 0, sizeof(self->period_buf_offset));
+	//gpiod_line_release(self->line);
 }
 
-int gpiod_frequency_counter_count(
+EXPORT int gpiod_frequency_counter_count(
 	gpiod_frequency_counter *self,
 	int waves,
-	struct timespec *max_time
+	const struct timespec *timeout
 ) {
 	int rc = 0;
 
-	rc = gpiod_line_request_rising_edge_events(
+	rc = gpiod_line_request_both_edges_events(
 		self->line,
 		"gpiod_frequency_counter"
 	);
 	if (rc) {
-		dbg("gpiod_line_request_rising_edge_events: %s\n", strerror(errno));
+		dbg("gpiod_line_request_both_edges_events: %s\n", strerror(errno));
 		return -1;
 	}
 
-	struct timespec timeout;
 	struct timespec start;
-	struct timespec last_event_time = {0};
-	int first_event = 1;
-	int skip_events = 1;
-	int wave = 0;
+	struct timespec remaining_timeout;
+	struct timespec *remaining_timeout_ptr = NULL;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	dbg_timespec("start", start);
+	if (timeout) {
+		remaining_timeout = *timeout;
+		remaining_timeout_ptr = &remaining_timeout;
+	}
 
 	if (waves == 0) {
 		waves = self->period_buf_size;
 	}
-	if (max_time) {
-		timeout = *max_time;
-	} else {
-		timeout.tv_sec = 1;
-		timeout.tv_nsec = 0;
-	}
+	int events = waves * 2;
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	struct gpiod_line_event prev;
 
 	while (1) {
-		rc = gpiod_line_event_wait(self->line, &timeout);
-
-		if (rc < 0) {
-			dbg("gpiod_line_event_wait: %s\n", strerror(errno));
-			rc = -1;
+		rc = read_event(self->line, &prev, remaining_timeout_ptr);
+		if (rc <= 0) {
+			goto end;
+		}
+		dbg_event("first event", prev);
+		if (timespec_gt(&prev.ts, &start)) {
 			break;
 		}
-		if (rc > 0) {
-			struct gpiod_line_event ev;
-			if ((rc = gpiod_line_event_read(self->line, &ev))) {
-				dbg("gpiod_line_event_read: %s\n", strerror(errno));
-				rc = -1;
-				break;
-			}
-			if (skip_events) {
-				--skip_events;
-			} else {
-				if (first_event) {
-					first_event = 0;
-				} else {
-					struct timespec period;
-					timespec_diff(&last_event_time, &ev.ts, &period);
-					double p = timespec_to_double(&period);
-					self->period[self->period_buf_offset] = p;
-					++self->period_buf_offset;
-					self->period_buf_offset %= self->period_buf_size;
-					dbg("period: %.04lfs\n", p);
-					if (++wave == waves) {
-						rc = 0;
-						break;
-					}
-				}
-				last_event_time = ev.ts;
-			}
-			dbg_timespec("event", ev.ts);
-		}
+		update_timeout(&start, timeout, remaining_timeout_ptr);
+	}
 
-		if (max_time) {
-			struct timespec time, elapsed;
-			clock_gettime(CLOCK_MONOTONIC, &time);
-			timespec_diff(&start, &time, &elapsed);
-			dbg_timespec("elapsed", elapsed);
-			if(timespec_ge(&elapsed, max_time)) {
-				dbg_timespec("last event", last_event_time);
-				rc = 0;
-				break;
-			}
-			else {
-				timespec_diff(&elapsed, max_time, &timeout);
-			}
+	while (1) {
+		struct gpiod_line_event ev;
+		rc = read_event(self->line, &ev, remaining_timeout_ptr);
+		if (rc <= 0) {
+			goto end;
 		}
+		dbg_event("event", ev);
+
+		double period = timespec_diff_double(&prev.ts, &ev.ts);
+		int value = prev.event_type == GPIOD_LINE_EVENT_RISING_EDGE;
+		prev = ev;
+		dbg("period: %d %.04lfs\n", value, period);
+
+		self->period_buf[value][self->period_buf_offset[value]] = period;
+		++self->period_buf_offset[value];
+		self->period_buf_offset[value] %= self->period_buf_size;
+
+		if (--events == 0) {
+			rc = 0;
+			break;
+		}
+		update_timeout(&start, timeout, remaining_timeout_ptr);
+	}
+
+end:
+	for (int i = 0; i < 2; ++i) {
+		self->period[i] = get_period(
+			self->period_buf[i],
+			self->period_buf_size
+		);
 	}
 
 	gpiod_line_release(self->line);
 	return rc;
 }
 
-double gpiod_frequency_counter_get_period(gpiod_frequency_counter *self) {
-	int count = 0;
-	double sum = 0.0;
-	dbg("[ ");
-	for (int i = 0; i < self->period_buf_size; ++i) {
-		dbg("%.04lf, ", self->period[i]);
-		if (self->period[i] > 0.0) {
-			++count;
-			sum += self->period[i];
-		}
-	}
-	dbg("]\n");
-	if (count == 0) {
-		return INFINITY;
-	}
-	return sum / count;
+EXPORT double gpiod_frequency_counter_get_period(
+	gpiod_frequency_counter *self
+) {
+	return self->period[0] + self->period[1];
 }
 
-double gpiod_frequency_counter_get_frequency(gpiod_frequency_counter *self) {
+EXPORT double gpiod_frequency_counter_get_frequency(
+	gpiod_frequency_counter *self
+) {
 	double period = gpiod_frequency_counter_get_period(self);
 	if (period == INFINITY) {
 		return 0.0;
 	}
+	if (period == 0.0) {
+		return INFINITY;
+	}
 	return 1.0 / period;
+}
+
+EXPORT double gpiod_frequency_counter_get_high_period(
+	gpiod_frequency_counter *self
+) {
+	return self->period[1];
+}
+
+EXPORT double gpiod_frequency_counter_get_low_period(
+	gpiod_frequency_counter *self
+) {
+	return self->period[0];
+}
+
+EXPORT double gpiod_frequency_counter_get_duty_cycle(
+	gpiod_frequency_counter *self
+) {
+	double period = gpiod_frequency_counter_get_period(self);
+	if (period == 0.0 || period == INFINITY) {
+		return 1.0;
+	}
+	double high = gpiod_frequency_counter_get_high_period(self);
+	return high / period;
 }

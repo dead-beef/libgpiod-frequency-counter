@@ -67,9 +67,15 @@ int main() {
 		gpiod_frequency_counter_count(&counter, BUF_SIZE, &interval);
 		double period = gpiod_frequency_counter_get_period(&counter);
 		double frequency = gpiod_frequency_counter_get_frequency(&counter);
+		double duty_cycle = gpiod_frequency_counter_get_duty_cycle(&counter);
 
-		for(int i = 0; i < 80; ++i, putchar('\b'));
-		printf("period=%.06fs frequency=%.06fHz   ", period, frequency);
+		fputs("\x1b[2K\r", stdout);
+		printf(
+			"period=%.06lfs frequency=%.06lfHz duty_cycle=%.02lf",
+			period,
+			frequency,
+			duty_cycle
+		);
 		fflush(stdout);
 	}
 

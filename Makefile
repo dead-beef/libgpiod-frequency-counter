@@ -2,7 +2,7 @@ AR := ar
 CC := gcc
 INSTALL := install -m 644
 INSTALL_BIN := install -m 755
-CFLAGS := -Wall -Werror -O2 -fPIC
+CFLAGS := -Wall -Werror -O2 -fPIC -fvisibility=hidden
 LDFLAGS := -lgpiod
 CMD_LDFLAGS := $(LDFLAGS) -L.
 
@@ -26,7 +26,8 @@ CFLAGS += $(INCLUDE_DIRS)
 CMD_LDFLAGS += -l$(LIB_NAME)
 
 # All source files in our project (without libraries!)
-LIB_CFILES := $(SRC_DIR)/gpiod_frequency_counter.c
+LIB_CFILES := $(SRC_DIR)/gpiod_frequency_counter.c \
+              $(SRC_DIR)/util.c
 CMD_CFILES := $(SRC_DIR)/gpio_frequency_get.c
 #DATA := $(wildcard $(DATA_DIR)/*)
 #DATA := $(DATA_DIR)
