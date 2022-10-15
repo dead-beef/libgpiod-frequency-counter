@@ -90,6 +90,22 @@ static PyObject *gpiod_frequency_counter_FrequencyCounter_repr(
 	return ret;
 }
 
+PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounter_reset_doc,
+"reset() -> None\n"
+"\n"
+"Clear wave period buffer.\n"
+);
+
+static PyObject* gpiod_frequency_counter_FrequencyCounter_reset(
+	gpiod_frequency_counter_FrequencyCounterObject *self,
+	PyObject *Py_UNUSED(args),
+	PyObject *Py_UNUSED(kwargs)
+) {
+	gpiod_frequency_counter_reset(&self->counter);
+	Py_RETURN_NONE;
+}
+
+
 PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounter_count_doc,
 "count([waves, [sec, [nsec]]]) -> None\n"
 "\n"
@@ -232,6 +248,12 @@ static PyMethodDef gpiod_frequency_counter_FrequencyCounter_methods[] = {
 		.ml_meth = (PyCFunction)gpiod_frequency_counter_FrequencyCounter_count,
 		.ml_flags = METH_VARARGS | METH_KEYWORDS,
 		.ml_doc = gpiod_frequency_counter_FrequencyCounter_count_doc,
+	},
+	{
+		.ml_name = "reset",
+		.ml_meth = (PyCFunction)gpiod_frequency_counter_FrequencyCounter_reset,
+		.ml_flags = METH_NOARGS,
+		.ml_doc = gpiod_frequency_counter_FrequencyCounter_reset_doc,
 	},
 	{}
 };
