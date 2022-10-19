@@ -9,27 +9,41 @@
 EXPORT int gpiod_frequency_counter_init(
 	gpiod_frequency_counter *self,
 	struct gpiod_line *line,
-	size_t buf_size
+	size_t buf_size,
+	const char *name,
+	int flags
 ) {
 	self->line = line;
 	self->period_buf_size = buf_size;
+	self->name = NULL;
+	self->flags = flags;
 	memset(self->period_buf, 0, sizeof(self->period_buf));
 	memset(self->period_buf_offset, 0, sizeof(self->period_buf_offset));
+	self->name = strdup(name ? name: "gpiod_frequency_counter");
+	if (!self->name) {
+		goto error;
+	}
 	for (int i = 0; i < 2; ++i) {
 		self->period[i] = INFINITY;
 		self->period_buf[i] = calloc(buf_size, sizeof(**self->period_buf));
 		if (!self->period_buf[i]) {
-			gpiod_frequency_counter_destroy(self);
-			return -1;
+			goto error;
 		}
 	}
 	return 0;
+error:
+	gpiod_frequency_counter_destroy(self);
+	return -1;
 }
 
 EXPORT void gpiod_frequency_counter_destroy(gpiod_frequency_counter *self) {
 	if (self->line) {
 		//gpiod_line_release(self->line);
 		self->line = NULL;
+	}
+	if (self->name) {
+		free(self->name);
+		self->name = NULL;
 	}
 	for (int i = 0; i < 2; ++i) {
 		if (self->period_buf[i]) {
@@ -56,9 +70,10 @@ EXPORT int gpiod_frequency_counter_count(
 ) {
 	int rc = 0;
 
-	rc = gpiod_line_request_both_edges_events(
+	rc = gpiod_line_request_both_edges_events_flags(
 		self->line,
-		"gpiod_frequency_counter"
+		self->name,
+		self->flags
 	);
 	if (rc) {
 		dbg("gpiod_line_request_both_edges_events: %s\n", strerror(errno));

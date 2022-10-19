@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
 		goto error;
 	}
 
-	if (gpiod_frequency_counter_init(&counter, line, args.buf_size)) {
+	if (gpiod_frequency_counter_init(&counter, line, args.buf_size, NULL, 0)) {
 		fprintf(stderr, "gpiod_frequency_counter_init: %s\n", strerror(errno));
 		goto error;
 	}

@@ -7,6 +7,8 @@
 typedef struct gpiod_frequency_counter {
 	struct gpiod_line *line;
 	size_t period_buf_size;
+	char *name;
+	int flags;
 	double *period_buf[2];
 	size_t period_buf_offset[2];
 	double period[2];
@@ -15,7 +17,9 @@ typedef struct gpiod_frequency_counter {
 int gpiod_frequency_counter_init(
 	gpiod_frequency_counter *self,
 	struct gpiod_line *line,
-	size_t buf_size
+	size_t buf_size,
+	const char *name,
+	int flags
 );
 void gpiod_frequency_counter_destroy(gpiod_frequency_counter *self);
 void gpiod_frequency_counter_reset(gpiod_frequency_counter *self);

@@ -5,7 +5,7 @@ CFLAGS := -Wall -Werror -O2 -fPIC -fvisibility=hidden
 LDFLAGS := -lgpiod
 
 PKG := libgpiod-frequency-counter
-VERSION := 0.3.0
+VERSION := 0.4.0
 SRC_DIR := src
 INCLUDE_DIR := include
 INCLUDE_DIRS := $(INCLUDE_DIR)

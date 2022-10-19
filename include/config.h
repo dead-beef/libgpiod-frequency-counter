@@ -3,6 +3,6 @@
 
 #define DEBUG 0
 
-#define VERSION_STR "0.3.0"
+#define VERSION_STR "0.4.0"
 
 #endif

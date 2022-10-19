@@ -32,15 +32,31 @@ static PyObject* get_gpiod_line_type() {
 static int gpiod_frequency_counter_FrequencyCounter_init(
 	gpiod_frequency_counter_FrequencyCounterObject *self,
 	PyObject *args,
-	PyObject *Py_UNUSED(kwargs)
+	PyObject *kwargs
 ) {
+	static char *kwlist[] = {
+		"line",
+		"buf_size",
+		"name",
+		"flags",
+		NULL
+	};
 	PyObject *line_object;
 	PyObject *line_type = get_gpiod_line_type();
 	if (!line_type) {
 		return -1;
 	}
+	char *name = NULL;
+	int flags = 0;
 	unsigned buf_size;
-	int rc = PyArg_ParseTuple(args, "O!I", line_type, &line_object, &buf_size);
+	int rc = PyArg_ParseTupleAndKeywords(
+		args, kwargs,
+		"O!I|si", kwlist,
+		line_type, &line_object,
+		&buf_size,
+		&name,
+		&flags
+	);
 	Py_DECREF(line_type);
 	if (!rc) {
 		return -1;
@@ -53,7 +69,13 @@ static int gpiod_frequency_counter_FrequencyCounter_init(
 	if (!line) {
 		return -1;
 	}
-	rc = gpiod_frequency_counter_init(&self->counter, line, buf_size);
+	rc = gpiod_frequency_counter_init(
+		&self->counter,
+		line,
+		buf_size,
+		name,
+		flags
+	);
 	if (rc) {
 		PyErr_SetFromErrno(PyExc_OSError);
 		return -1;
@@ -168,6 +190,28 @@ static PyObject* gpiod_frequency_counter_FrequencyCounter_get_buf_size(
 	return PyLong_FromSize_t(res);
 }
 
+PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounter_get_name_doc,
+"Name (string)."
+);
+
+static PyObject* gpiod_frequency_counter_FrequencyCounter_get_name(
+	gpiod_frequency_counter_FrequencyCounterObject *self,
+	PyObject *Py_UNUSED(args)
+) {
+	return PyUnicode_FromFormat("%s", self->counter.name);
+}
+
+PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounter_get_flags_doc,
+"Additional GPIO line request flags (integer)."
+);
+
+static PyObject* gpiod_frequency_counter_FrequencyCounter_get_flags(
+	gpiod_frequency_counter_FrequencyCounterObject *self,
+	PyObject *Py_UNUSED(args)
+) {
+	return PyLong_FromLong(self->counter.flags);
+}
+
 PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounter_get_frequency_doc,
 "Frequency in hertz (float)."
 );
@@ -237,7 +281,12 @@ PyDoc_STRVAR(gpiod_frequency_counter_FrequencyCounterType_doc,
 "    line = chip.get_line(0)\n"
 "    buf_size = 64\n"
 "    timeout_sec = 1\n"
-"    counter = gpiod_frequency_counter.FrequencyCounter(line, buf_size)\n"
+"    name = 'counter'\n"
+"    flags = 0\n"
+"    counter = gpiod_frequency_counter.FrequencyCounter(\n"
+"        line, buf_size,\n"
+"        name=name, flags=flags\n"
+"    )\n"
 "    counter.count(sec=timeout_sec)\n"
 "    print(counter.period, counter.frequency)\n"
 );
@@ -263,6 +312,16 @@ static PyGetSetDef gpiod_frequency_counter_FrequencyCounter_getset[] = {
 		.name = "buf_size",
 		.get = (getter)gpiod_frequency_counter_FrequencyCounter_get_buf_size,
 		.doc = gpiod_frequency_counter_FrequencyCounter_get_buf_size_doc,
+	},
+	{
+		.name = "name",
+		.get = (getter)gpiod_frequency_counter_FrequencyCounter_get_name,
+		.doc = gpiod_frequency_counter_FrequencyCounter_get_name_doc,
+	},
+	{
+		.name = "flags",
+		.get = (getter)gpiod_frequency_counter_FrequencyCounter_get_flags,
+		.doc = gpiod_frequency_counter_FrequencyCounter_get_flags_doc,
 	},
 	{
 		.name = "frequency",

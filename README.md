@@ -19,7 +19,7 @@ sudo apt-get install debhelper build-essential libgpiod-dev python3-dev
 git clone https://github.com/dead-beef/libgpiod-frequency-counter.git
 cd libgpiod-frequency-counter
 make pkg
-sudo dpkg -i ../libgpiod-frequency-counter_0.3.0-1_*.deb ../libgpiod-frequency-counter-dev_0.3.0-1_*.deb ../gpiod-frequency_0.3.0-1_*.deb ../python3-libgpiod-frequency-counter_0.3.0-1_*.deb
+sudo dpkg -i ../libgpiod-frequency-counter_0.4.0-1_*.deb ../libgpiod-frequency-counter-dev_0.4.0-1_*.deb ../gpiod-frequency_0.4.0-1_*.deb ../python3-libgpiod-frequency-counter_0.4.0-1_*.deb
 ```
 
 ## Usage
